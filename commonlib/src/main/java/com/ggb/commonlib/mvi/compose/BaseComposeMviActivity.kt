@@ -1,0 +1,103 @@
+package com.ggb.commonlib.mvi.compose
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.ViewModelProvider
+import com.ggb.commonlib.ext.getVmClazz
+import com.ggb.commonlib.mvi.BaseSingleEvent
+import com.ggb.commonlib.mvi.MviViewModel
+import com.ggb.commonlib.mvi.SingleEvent
+import com.ggb.commonlib.mvi.ViewIntent
+import com.ggb.commonlib.mvi.ViewState
+
+/**
+ * Compose + MVI Activity 基类
+ * - 单向数据流：View -> Intent -> ViewModel -> State -> View
+ * - 使用 Compose 渲染 UI
+ */
+abstract class BaseComposeMviActivity<VM : MviViewModel<I, S>, I : ViewIntent, S : ViewState> : ComponentActivity() {
+
+    protected lateinit var viewModel: VM
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        viewModel = createViewModel()
+        setContent {
+            val state by viewModel.state.collectAsState()
+            ObserveSingleEvents()
+            Render(state = state) { intent ->
+                viewModel.dispatchIntent(intent)
+            }
+        }
+    }
+    
+    /**
+     * 创建 ViewModel
+     */
+    private fun createViewModel(): VM {
+        return ViewModelProvider(this)[getVmClazz(this)]
+    }
+
+
+    /**
+     * 渲染 UI
+     * @param state 当前状态
+     * @param dispatch 发送 Intent 的函数
+     */
+    @Composable
+    protected abstract fun Render(state: S, dispatch: (I) -> Unit)
+
+    /**
+     * 处理单次事件（Toast、导航等）
+     */
+    @Composable
+    protected open fun ObserveSingleEvents() {
+        LaunchedEffect(Unit) {
+            viewModel.singleEvent.collect { event ->
+                handleSingleEvent(event)
+            }
+        }
+    }
+
+    /**
+     * 处理单次事件，子类可重写
+     */
+    protected open fun handleSingleEvent(event: SingleEvent) {
+        when (event) {
+            is BaseSingleEvent.ShowToast -> showToast(event.message)
+            is BaseSingleEvent.ShowError -> showError(event.message)
+            is BaseSingleEvent.Navigate -> navigate(event.destination, event.args)
+            is BaseSingleEvent.Finish -> finish()
+        }
+    }
+
+    /**
+     * 显示 Toast（默认实现，子类可以重写）
+     * 
+     * 子类需要实现此方法来显示 Toast
+     * 可以根据项目需求使用自定义 Toast 样式或 Snackbar
+     */
+    protected open fun showToast(message: String) {
+        // 默认实现，子类可以重写
+    }
+
+    /**
+     * 显示错误（默认实现，子类可以重写）
+     * 
+     * 子类需要实现此方法来显示错误
+     * 可以根据项目需求使用自定义错误提示样式或 Snackbar
+     */
+    protected open fun showError(message: String) {
+        // 默认实现，子类可以重写
+    }
+
+    /**
+     * 导航（默认空实现）
+     */
+    protected open fun navigate(destination: String, args: Map<String, Any>? = null) {}
+}
