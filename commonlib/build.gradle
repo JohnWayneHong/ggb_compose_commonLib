@@ -20,9 +20,9 @@ afterEvaluate {
                 from components.release
 
                 // You can then customize attributes of the publication as shown below.
-                groupId = 'com.ggb.jetpack'
-                artifactId = 'commonlib'
-                version = '2.0.0'
+                groupId = 'com.github.JohnWayneHong'
+                artifactId = 'ggb_compose_commonLib'
+                version = '1.0.0'
             }
         }
     }
